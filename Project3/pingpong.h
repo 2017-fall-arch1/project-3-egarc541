@@ -13,7 +13,7 @@ typedef struct MovLayer_s{
 } MovLayer;
 
 void movLayerDraw(MovLayer *movLayers, Layer *layers);
-void mlAdvance(MovLayer *ml, MovLayer *ml1, MovLayer *ml2, Region *fence);
+void mlAdvance(MovLayer *ml, Region *fence);
 void main();
 void wdt_c_handler();
 

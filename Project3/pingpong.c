@@ -54,9 +54,9 @@ Layer ball = {
   &leftPaddle,
 };
 
-MovLayer rightP= { &rightPaddle, {0,0}, 0};
-MovLayer leftP ={ &leftPaddle, {0,0}, 0};
-MovLayer mball = {&ball, {2,2}, &leftP};
+MovLayer ml0 = { &rightPaddle, {0,0}, 0};
+MovLayer ml1 ={ &leftPaddle, {0,0}, &ml0};
+MovLayer ml2 = {&ball, {2,2}, &ml1};
 
 void movLayerDraw( MovLayer *movLayers, Layer *layers){
   int row,col;
@@ -92,46 +92,59 @@ void movLayerDraw( MovLayer *movLayers, Layer *layers){
       } // for row
     } // for moving layer
 }
-	      
-void mlAdvance(MovLayer *ml, MovLayer *ml1, MovLayer *ml2, Region *fence){
+
+int collision_detector (Vec2 *newPos, u_int axis){
+  int velocity2=0;
+  if(abShapeCheck(ml0.layer->abShape, &ml0.layer->posNext, newPos) ||
+     (abShapeCheck(ml1.layer->abShape, &ml1.layer->posNext, newPos))){
+    velocity2 = ml2.velocity.axes[axis] = - ml2.velocity.axes[axis];
+    return velocity2;
+  }
+}
+  
+
+void mlAdvance(MovLayer *ml, Region *fence){
 
   Vec2 newPos;
   u_char axis;
+  u_char counter, counter2;
   Region shapeBoundary;
 
   for(; ml; ml= ml-> next){
     vec2Add(&newPos, &ml ->layer->posNext, &ml->velocity);
     abShapeGetBounds(ml ->layer->abShape, &newPos,
 		     &shapeBoundary);
+
+    counter =0;
+    counter2 =0;
+    
     for(axis = 0; axis < 2; axis ++){
-      if((shapeBoundary.topLeft.axes[axis] < fence->topLeft.axes[axis]) ||
-	 (shapeBoundary.botRight.axes[axis]> fence->botRight.axes[axis])) {
+      if(shapeBoundary.topLeft.axes[axis] < fence->topLeft.axes[axis]){
 	int velocity = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
 	newPos.axes[axis] += (2*velocity);
-      }
-      if(ml->layer->abShape == mball.layer->abShape){
-	if(abShapeCheck(ml1->layer->abShape, &ml1->layer->posNext,&newPos)){
-	  int velocity = mball.velocity.axes[axis] = - mball.velocity.axes[axis];
-	  newPos.axes[axis] += (2*velocity);
+      
+	if(ml->layer->abShape == ml2.layer->abShape & (counter<1)){
+	score1+=1;
+	counter += 1;
+	
 	}
       }
-      
-      if(abShapeCheck(ml2->layer->abShape, &ml2->layer->posNext, &newPos)){
-	int velocity = mball.velocity.axes[axis] = -mball.velocity.axes[axis];
+      else if( shapeBoundary.botRight.axes[axis] >  fence->botRight.axes[axis]){
+	int velocity= ml->velocity.axes[axis] = -ml->velocity.axes[axis];
 	newPos.axes[axis] += (2*velocity);
+      
+	if(ml->layer->abShape == ml2.layer->abShape & (counter2<1)){
+	  score2 +=1;
+	  counter2 +=1;
+	}
       }
-      if((shapeBoundary.topLeft.axes[axis] < fence-> topLeft.axes[axis]) &&
-	 !(abShapeCheck(ml2->layer->abShape, &ml2->layer->posNext,
-			&newPos))){
-	score1++;
-      }
-      else if((shapeBoundary.botRight.axes[axis] < fence-> botRight.axes[axis]) &&
-	      !(abShapeCheck(ml1->layer->abShape, &ml1->layer->posNext,
-			     &newPos))){
-	score2++;
-      }
+	
+      if(ml->layer->abShape == ml2.layer->abShape){
+	int velocity = collision_detector(&newPos,axis);
+	newPos.axes[axis] += (2*velocity);
     }
     ml->layer->posNext = newPos;
+   }
   }
 }
 
@@ -171,7 +184,7 @@ void main(){
       or_sr(0x10);
     }
     redrawScreen = 0;
-    movLayerDraw(&mball,&ball);
+    movLayerDraw(&ml2,&ball);
 
     drawChar5x7(screenWidth/2+10,2,game[score1], COLOR_RED,COLOR_BLACK);
     drawString5x7(screenWidth/2,2,"-", COLOR_GREEN, COLOR_BLACK);
@@ -186,26 +199,26 @@ void wdt_c_handler(){
   P1OUT |= GREEN_LED;
   count++;
   if(count == 15) {
-      mlAdvance(&mball, &leftP, &rightP, &fieldFence);
+      mlAdvance(&ml2, &fieldFence);
 
       u_int switches = ~p2sw_read();
 
       if(S1 & switches){
-      leftP.velocity.axes[1] =3;
+      ml1.velocity.axes[1] =3;
     }
       else if(S2 & switches){
-      leftP.velocity.axes[1]= -3;
+     ml1.velocity.axes[1]= -3;
     }
 
     else if(S3 & switches){
-      rightP.velocity.axes[1] = 3;
+     ml0.velocity.axes[1] = 3;
     }
     else if(S4 & switches){
-      rightP.velocity.axes[1] = -3;
+      ml0.velocity.axes[1] = -3;
     }
     else{
-      leftP.velocity.axes[1] = 0;
-      rightP.velocity.axes[1] = 0;
+     ml1.velocity.axes[1] = 0;
+      ml0.velocity.axes[1] = 0;
     }
     redrawScreen = 1;
     count = 0;
