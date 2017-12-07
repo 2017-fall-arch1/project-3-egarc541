@@ -7,8 +7,10 @@
 #include <abCircle.h>
 #include "pingpong.h"
 
+#define GREEN_LED BIT6
+
 int play, score1, score2;
-char game[10] = "0123456789";
+char game[4] = "0123";
 
 AbRect paddleRec = {abRectGetBounds, abRectCheck, {2,15}};
 
@@ -141,6 +143,7 @@ Region fieldFence;
 void main(){
 
   play=1;
+ 
   configureClocks();
   lcd_init();
   shapeInit();
@@ -180,37 +183,31 @@ void main(){
 void wdt_c_handler(){
 
   static short count =0;
+  P1OUT |= GREEN_LED;
   count++;
   if(count == 15) {
-    if((S1 & p2sw_read()) && (S3 & p2sw_read())){
-      play=0;
-    }
-
-    if(!play){
-      redrawScreen = 1;
       mlAdvance(&mball, &leftP, &rightP, &fieldFence);
 
+      u_int switches = ~p2sw_read();
+
+      if(S1 & switches){
+      leftP.velocity.axes[1] =3;
+    }
+      else if(S2 & switches){
+      leftP.velocity.axes[1]= -3;
     }
 
-    if((S1 & p2sw_read())==0){
-      leftP.velocity.axes[1] =4;
+    else if(S3 & switches){
+      rightP.velocity.axes[1] = 3;
     }
-    else if((S2 & p2sw_read()) ==0){
-      leftP.velocity.axes[1]= -4;
-    }
-    else{
-      leftP.velocity.axes[1]=0;
-    }
-
-    if((S3 & p2sw_read()) == 0){
-      rightP.velocity.axes[1] = 4;
-    }
-    else if((S4 & p2sw_read()) == 0){
-      rightP.velocity.axes[1] = -4;
+    else if(S4 & switches){
+      rightP.velocity.axes[1] = -3;
     }
     else{
-      rightP.velocity.axes[1] =0;
+      leftP.velocity.axes[1] = 0;
+      rightP.velocity.axes[1] = 0;
     }
+    redrawScreen = 1;
     count = 0;
   }
 }
